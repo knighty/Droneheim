@@ -11,16 +11,10 @@ namespace Droneheim.GUI.Properties.Editors
 
 		public void Start()
 		{
-			GameObject root = new GameObject();
-			root.AddComponent<HorizontalLayoutGroup>();
+			GameObject root = ComponentInitialiser.Layout(false);
 
-			GameObject updateButton = new GameObject();
-			updateButton.AddComponent<Button>();
-			updateButton.transform.SetParent(root.transform);
-
-			GameObject updateButtonText = new GameObject();
-			updateButtonText.AddComponent<Text>().text = "Set";
-			updateButtonText.transform.SetParent(updateButton.transform);
+			GameObject updateButton = ComponentInitialiser.Button("Update");
+			updateButton.transform.SetParent(root.transform, false);
 
 			root.transform.SetParent(gameObject.transform);
 		}

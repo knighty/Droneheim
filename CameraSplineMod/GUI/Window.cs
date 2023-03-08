@@ -69,8 +69,9 @@ namespace Droneheim.GUI
 		{
 			rootObject = ComponentInitialiser.Panel("Window");
 			rootObject.GetComponent<VerticalLayoutGroup>().childControlHeight = true;
+			rootObject.GetComponent<VerticalLayoutGroup>().spacing = 10;
 
-			GameObject titleBackground = initialiser.Layout(false, "Title");
+			GameObject titleBackground = ComponentInitialiser.Layout(false, "Title");
 			/*titleBackground.GetComponent<RectTransform>().anchorMin = new Vector2(1, 0);
 			titleBackground.GetComponent<RectTransform>().anchorMax = new Vector2(1, 0);*/
 			titleBackground.GetComponent<VerticalLayoutGroup>().childControlHeight = true;
@@ -85,15 +86,15 @@ namespace Droneheim.GUI
 			contentObject.transform.SetParent(rootObject.transform);
 			content = contentObject;
 
-			contentObject.AddComponent<Image>().color = new Color(1, 0, 0, 0.2f);
+			//contentObject.AddComponent<Image>().color = new Color(1, 0, 0, 0.2f);
 
 			{
 				VerticalLayoutGroup verticalLayoutGroup = contentObject.AddComponent<VerticalLayoutGroup>();
 				contentObject.GetComponent<RectTransform>().anchorMin = Vector2.zero;
-				contentObject.GetComponent<RectTransform>().anchorMax = Vector2.one;
+				contentObject.GetComponent<RectTransform>().anchorMax = Vector2.zero;
 				contentObject.GetComponent<RectTransform>().pivot = new Vector2(0, 0);
 				contentObject.GetComponent<RectTransform>().sizeDelta = Vector2.zero;
-				verticalLayoutGroup.childScaleWidth = true;
+				//verticalLayoutGroup.childScaleWidth = true;
 				verticalLayoutGroup.childControlHeight = false;
 				verticalLayoutGroup.childForceExpandHeight = false;
 			}
@@ -105,10 +106,10 @@ namespace Droneheim.GUI
 			graph.AddData(new GraphDataTest());
 			graphObject.transform.SetParent(contentObject.transform);*/
 
-			for (int i = 0; i < 3; i++)
+			for (int i = 0; i < 0; i++)
 			{
 				//initialiser.Text("Test Button", contentObject, "Button");
-				initialiser.Button("Test Button", contentObject, "Button");
+				ComponentInitialiser.Button("Test Button", contentObject, "Button");
 			}
 		}
 

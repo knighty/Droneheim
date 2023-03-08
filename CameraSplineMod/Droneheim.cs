@@ -9,12 +9,43 @@ using P = Droneheim.GUI.StyleProperties;
 
 namespace Droneheim
 {
-	public class TestComp : Component
+	class DroneheimResources
 	{
+		public static Sprite WindowBackground;
+		public static Sprite InsetBackground;
+		public static Sprite ConfirmBackground;
 
+		public static Sprite PreviousKeyframe;
+		public static Sprite NextKeyframe;
+		
+		public static Sprite KeyframeOff;
+		public static Sprite KeyframeOn;
+
+		public static void Init()
+		{
+			Texture2D tex = AssetUtils.LoadTexture("ui.png");
+
+			Sprite GetSprite(int x, int y, int size, int slicedBorder = 0)
+			{
+				if (slicedBorder > 0)
+				{
+					return Sprite.Create(tex, new Rect(x, y, size, size), new Vector2(0.5f, 0.5f), 1, 0, SpriteMeshType.FullRect, new Vector4(slicedBorder, slicedBorder, slicedBorder, slicedBorder));
+				}
+				return Sprite.Create(tex, new Rect(x, y, size, size), new Vector2(0.5f, 0.5f), 1, 0, SpriteMeshType.FullRect);
+			}
+
+			WindowBackground =	GetSprite(48 * 0, 0, 48, 16);
+			InsetBackground =	GetSprite(48 * 1, 0, 48, 16);
+			ConfirmBackground = GetSprite(48 * 2, 0, 48, 16);
+
+			KeyframeOff =		GetSprite(48 * 3, 0, 24);
+			KeyframeOn =		GetSprite(48 * 3, 24, 24);
+
+			PreviousKeyframe =	GetSprite(48 * 3 + 24 * 1, 0, 24);
+			NextKeyframe =		GetSprite(48 * 3 + 24 * 1, 24, 24);
+		}
 	}
 
-	[RequireComponent(typeof(TestComp))]
 	[RequireComponent(typeof(SplineRenderer), typeof(Timeline))]
 	public class Droneheim : MonoBehaviour
 	{
@@ -39,13 +70,7 @@ namespace Droneheim
 		protected void InitialiseCentre(GameObject parent, ComponentInitialiser componentInitialiser)
 		{
 			GameObject obj = new GameObject();
-			obj.AddComponent<RectTransform>();
-			obj.GetComponent<RectTransform>().pivot = Vector2.zero;
-
-			/*HorizontalLayoutGroup horizontalLayoutGroup = obj.AddComponent<HorizontalLayoutGroup>();
-			obj.AddComponent<ContentSizeFitter>();
-			horizontalLayoutGroup.childControlHeight = true;
-			horizontalLayoutGroup.childForceExpandHeight = false;*/
+			ComponentInitialiser.InitAnchors(obj.AddComponent<RectTransform>());
 
 			obj.AddComponent<LayoutElement>().flexibleHeight = 1;
 			obj.transform.SetParent(parent.transform);
@@ -53,17 +78,18 @@ namespace Droneheim
 			Window window = new Window(componentInitialiser, "Example Window")
 			{
 				AnchorMin = new Vector2(1, 0),
-				AnchorMax = new Vector2(1, 0.5f),
+				AnchorMax = new Vector2(1, 0),
 				//Size = new Vector2(500, 0),
 			};
-			window.PositionRect.offsetMin = new Vector2(-300, 0);
+			window.PositionRect.offsetMin = new Vector2(-400, 0);
+			window.PositionRect.offsetMax = new Vector2(0, 600);
 			window.AddTo(obj);
 
-			/*GameObject propertyEditor = new GameObject();
+			GameObject propertyEditor = new GameObject();
 			KeyframeablePropertyEditor editorComponent = propertyEditor.AddComponent<KeyframeablePropertyEditor>();
 			editorComponent.componentInitialiser = componentInitialiser;
-			editorComponent.AddProperties(CameraProperties, Timeline);
-			propertyEditor.transform.SetParent(window.Content.transform);*/
+			editorComponent.SetObject(CameraProperties, Timeline);
+			propertyEditor.transform.SetParent(window.Content.transform);
 		}
 
 		protected void InitialiseTimeline(GameObject parent, ComponentInitialiser componentInitialiser)
@@ -89,33 +115,29 @@ namespace Droneheim
 				ComponentInitialiser componentInitialiser = new ComponentInitialiser();
 
 				Stylesheet stylesheet = ui.AddComponent<Stylesheet>();
-
-				Texture2D tex = AssetUtils.LoadTexture("ui.png");
-				int d = tex.height;
-				Sprite spriteWindowBackground = Sprite.Create(tex, new Rect(d * 0, 0, d, d), new Vector2(0.5f, 0.5f), 1, 0, SpriteMeshType.FullRect, new Vector4(16, 16, 16, 16));
-				Sprite spriteInsetBackground = Sprite.Create(tex, new Rect(d * 1, 0, d, d), new Vector2(0.5f, 0.5f), 1, 0, SpriteMeshType.FullRect, new Vector4(16, 16, 16, 16));
-				Sprite spriteConfirmBackground = Sprite.Create(tex, new Rect(d * 2, 0, d, d), new Vector2(0.5f, 0.5f), 1, 0, SpriteMeshType.FullRect, new Vector4(16, 16, 16, 16));
-
+				DroneheimResources.Init();
 
 				stylesheet.AddStyle("Body", s =>
 				{
 					s.Set(P.Font, Resources.GetBuiltinResource<Font>("Arial.ttf"));
+					s.Set(P.FontSize, 16);
+					s.Set(P.FontStyle, FontStyle.Bold);
 				});
 
 				stylesheet.AddStyle("Button", s =>
 				{
-					s.Set(P.BackgroundImage, spriteConfirmBackground);
-					s.Set(P.Padding, new RectOffset(16, 16, 16, 16));
-					s.Set(P.FontWeight, FontStyle.Bold);
+					s.Set(P.BackgroundImage, DroneheimResources.ConfirmBackground);
+					//s.Set(P.Padding, new RectOffset(16, 16, 16, 16));
+					s.Set(P.FontStyle, FontStyle.Bold);
 					s.Set(P.Color, Color.white);
 				});
 
 				stylesheet.AddStyle("Input", s =>
 				{
-					s.Set(P.BackgroundImage, spriteInsetBackground);
+					s.Set(P.BackgroundImage, DroneheimResources.InsetBackground);
 					s.Set(P.BackgroundColor, RGBColor(26, 26, 26));
 					s.Set(P.Padding, new RectOffset(8, 8, 8, 8));
-					s.Set(P.FontWeight, FontStyle.Bold);
+					s.Set(P.FontStyle, FontStyle.Bold);
 					s.Set(P.FontSize, 14);
 					s.Set(P.Color, Color.white);
 				});
@@ -123,21 +145,39 @@ namespace Droneheim
 				stylesheet.AddStyle(".Window", s =>
 				{
 					s.Set(P.Padding, new RectOffset(16, 16, 16, 16));
-					s.Set(P.BackgroundImage, spriteWindowBackground);
+					s.Set(P.BackgroundImage, DroneheimResources.WindowBackground);
 					s.Set(P.Color, Color.white);
 				});
 
 				stylesheet.AddStyle(".Window .Title", s =>
 				{
-					s.Set(P.BackgroundImage, spriteInsetBackground);
+					s.Set(P.BackgroundImage, DroneheimResources.InsetBackground);
 					s.Set(P.BackgroundColor, RGBColor(87, 82, 76));
-					s.Set(P.FontSize, 18);
-					s.Set(P.FontWeight, FontStyle.Bold);
+					s.Set(P.FontSize, 16);
+					//s.Set(P.FontStyle, FontStyle.Bold);
 					s.Set(P.Color, Color.white);
-					s.Set(P.Padding, new RectOffset(16, 16, 16, 16));
+					s.Set(P.Padding, new RectOffset(16, 16, 8, 8));
 				});
 
-				stylesheet.styleTree.Print(0);
+				stylesheet.AddStyle("Input", s =>
+				{
+					s.Set(P.BackgroundImage, DroneheimResources.InsetBackground);
+					s.Set(P.BackgroundColor, RGBColor(87, 82, 76));
+					s.Set(P.FontSize, 14);
+					s.Set(P.Color, Color.white);
+				});
+
+				stylesheet.AddStyle(".property", s =>
+				{
+					s.Set(P.FontStyle, FontStyle.Normal);
+					s.Set(P.FontSize, 14);
+					s.Set(P.Color, Color.gray);
+				});
+
+				stylesheet.AddStyle(".property .name", s =>
+				{
+					s.Set(P.TextAlign, TextAnchor.MiddleLeft);
+				});
 
 				Canvas c = ui.AddComponent<Canvas>();
 				c.renderMode = RenderMode.ScreenSpaceCamera;
@@ -163,6 +203,8 @@ namespace Droneheim
 				InitialiseTimeline(ui, componentInitialiser);
 
 				ui.transform.SetParent(gameObject.transform);
+
+				LayoutRebuilder.MarkLayoutForRebuild(ui.transform as RectTransform);
 			}
 			catch (Exception)
 			{

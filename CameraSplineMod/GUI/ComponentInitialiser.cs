@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -7,94 +8,6 @@ using UnityEngine.UI;
 
 namespace Droneheim.GUI
 {
-	interface TextStyler
-	{
-		void Style(Text text);
-	}
-
-	class BasicTextStyler : TextStyler
-	{
-		protected int size;
-		protected FontStyle fontStyle;
-		protected Color color;
-
-		public BasicTextStyler(int size, FontStyle fontStyle, Color color)
-		{
-			this.size = size;
-			this.fontStyle = fontStyle;
-			this.color = color;
-		}
-
-		public void Style(Text text)
-		{
-			text.fontSize = size;
-			text.fontStyle = fontStyle;
-			text.color = color;
-		}
-	}
-
-	interface BoxLayoutStyler
-	{
-		void Style(RectTransform rect);
-		void Style(LayoutGroup layoutGroup);
-	}
-
-	class BasicBoxLayoutStyler : BoxLayoutStyler
-	{
-		public int Width { get; set; }
-		public int Height { get; set; }
-		public RectOffset Padding { get; set; }
-		public int Spacing { get; set; }
-
-		public void Style(RectTransform rect)
-		{
-			if (Width != 0 && Height != 0)
-			{
-				rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, Width);
-				rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Height);
-				rect.ForceUpdateRectTransforms();
-				//rect.sizeDelta = new Vector2(Width, Height);
-			}
-		}
-
-		public void Style(LayoutGroup layoutGroup)
-		{
-			layoutGroup.padding = Padding;
-		}
-	}
-
-	interface ImageStyler
-	{
-		void Style(Image image);
-	}
-
-	class BackgroundImageStyler : ImageStyler
-	{
-		protected Sprite Sprite { get; set; }
-		public Color Color { get; }
-
-		public BackgroundImageStyler(Sprite sprite, Color color)
-		{
-			Sprite = sprite;
-			Color = color;
-		}
-
-		public void Style(Image image)
-		{
-			image.sprite = Sprite;
-			image.type = Image.Type.Sliced;
-			image.color = Color;
-		}
-	}
-
-	class Styler
-	{
-		public Styler Parent { get; set; }
-		public TextStyler TextStyler { get; set; }
-		public ImageStyler ImageStyler { get; set; }
-		public BoxLayoutStyler BoxLayoutStyler { get; set; }
-	}
-
 	public class ComponentInitialiser
 	{
 		private DefaultControls.Resources resources = new DefaultControls.Resources();
@@ -110,8 +23,16 @@ namespace Droneheim.GUI
 
 		public static void InitAnchors(RectTransform rect)
 		{
-			rect.anchorMin = Vector2.zero;
-			rect.anchorMax = Vector2.one;
+			rect.anchorMin = Vector2.zero;// new Vector2(0, 1);
+			rect.anchorMax = Vector2.zero;// new Vector2(0, 1);
+			rect.sizeDelta = Vector2.zero;
+			rect.pivot = Vector2.zero;
+		}
+
+		public static void InitAnchors(RectTransform rect, Vector2 min, Vector2 max)
+		{
+			rect.anchorMin = min;
+			rect.anchorMax = max;
 			rect.sizeDelta = Vector2.zero;
 			rect.pivot = Vector2.zero;
 		}
@@ -133,37 +54,41 @@ namespace Droneheim.GUI
 		public GameObject Text(string text, GameObject parent = null, string styleClass = null)
 		{
 			GameObject obj = DefaultControls.CreateText(resources);
-			obj.AddComponent<StyledElement>().StyleClass = styleClass;
-			Text textComponent = obj.GetComponent<Text>();
-			textComponent.text = text;
-			textComponent.alignment = TextAnchor.MiddleCenter;
-
-			InitialiseAnchors(obj.GetComponent<RectTransform>());
-			InitContentFitter(obj.AddComponent<ContentSizeFitter>());
-
-			if (parent != null )
+			if (parent != null)
 			{
 				obj.transform.SetParent(parent.transform);
 			}
+
+			AddStyleElement(obj, "Element", styleClass);
+
+			Text textComponent = obj.GetComponent<Text>();
+			textComponent.text = text;
+			textComponent.alignment = TextAnchor.UpperLeft;
+
+			InitAnchors(obj.GetComponent<RectTransform>(), Vector2.zero, Vector2.one);
+
+			
 			return obj;
 		}
 
 		static void AddStyleElement(GameObject obj, string type = null, string styleClass = null)
 		{
 			StyledElement e = obj.AddComponent<StyledElement>();
-			e.StyleClass = styleClass;
+			if (styleClass != null)
+			{
+				e.Classes.Add(styleClass);
+			}
 			e.ElementType = type;
 		}
 
-		public GameObject Button(string text, GameObject parent = null, string styleClass = null)
+		public static GameObject Button(string text, GameObject parent = null, string styleClass = null)
 		{
 			GameObject buttonObject = new GameObject();
 			buttonObject.AddComponent<RectTransform>();
 			buttonObject.AddComponent<Button>();
 			buttonObject.AddComponent<HorizontalLayoutGroup>();
-			buttonObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 			AddStyleElement(buttonObject, "Button", styleClass);
-			InitialiseAnchors(buttonObject.GetComponent<RectTransform>());
+			InitAnchors(buttonObject.GetComponent<RectTransform>());
 
 			Image imageComponent = buttonObject.AddComponent<Image>();
 
@@ -171,44 +96,64 @@ namespace Droneheim.GUI
 			textObject.transform.SetParent(buttonObject.transform);
 			textObject.AddComponent<RectTransform>();
 			AddStyleElement(textObject);
-			InitialiseAnchors(textObject.GetComponent<RectTransform>());
+			InitAnchors(textObject.GetComponent<RectTransform>());
 
 			Text textComponent = textObject.AddComponent<Text>();
 			//textComponent.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
 			textComponent.text = text;
 			textComponent.alignment = TextAnchor.MiddleCenter;
-			textComponent.fontSize = 20;
-			textComponent.color = Color.black;
 
 			if (parent != null)
 			{
-				buttonObject.transform.SetParent(parent.transform);
+				buttonObject.transform.SetParent(parent.transform, false);
 			}
 
 			return buttonObject;
 		}
 
-		public GameObject Layout(bool horizontal = false, string styleClass = null)
+		public static GameObject Layout(bool horizontal = false, string styleClass = null)
 		{
 			GameObject panel = new GameObject();
-			panel.AddComponent<StyledElement>().StyleClass = styleClass;
-			InitialiseAnchors(panel.AddComponent<RectTransform>());
-			InitContentFitter(panel.AddComponent<ContentSizeFitter>());
+			AddStyleElement(panel, "Element", styleClass);
 
-			panel.AddComponent<Image>();
+			panel.AddComponent<Image>().color = Color.clear;
 			HorizontalOrVerticalLayoutGroup layoutGroup;
 			if (horizontal) layoutGroup = panel.AddComponent<HorizontalLayoutGroup>();
 			else layoutGroup = panel.AddComponent<VerticalLayoutGroup>();
-			layoutGroup.childControlHeight = false;
+
 			layoutGroup.childForceExpandHeight = false;
+			layoutGroup.childForceExpandWidth = false;
 
 			return panel;
+		}
+
+		public static GameObject Generic(string styleClass = null)
+		{
+			GameObject panel = new GameObject();
+			//panel.transform.SetParent(parent.transform);
+			AddStyleElement(panel, "Element", styleClass);
+			InitAnchors(panel.AddComponent<RectTransform>());
+
+			return panel;
+		}
+
+		public static GameObject Image(Sprite sprite, string styleClass = null)
+		{
+			GameObject img = ComponentInitialiser.Generic();
+			Image image = img.AddComponent<Image>();
+			image.sprite = sprite;
+			image.type = UnityEngine.UI.Image.Type.Simple;
+			LayoutElement layoutElement = img.AddComponent<LayoutElement>();
+			layoutElement.minHeight = sprite.rect.height;
+			layoutElement.minHeight = sprite.rect.width;
+
+			return img;
 		}
 
 		public static GameObject Panel(string styleClass = null)
 		{
 			GameObject panel = new GameObject();
-			panel.AddComponent<StyledElement>().StyleClass = styleClass;
+			AddStyleElement(panel, "Element", styleClass);
 			InitAnchors(panel.AddComponent<RectTransform>());
 
 			Image imageComponent = panel.AddComponent<Image>();
@@ -228,20 +173,19 @@ namespace Droneheim.GUI
 
 			InputField inputField = root.AddComponent<InputField>();
 			Image image = root.AddComponent<Image>();
-			root.AddComponent<ContentSizeFitter>();
 			InitAnchors(root.GetComponent<RectTransform>());
-			//root.GetComponent<RectTransform>().sizeDelta = new Vector2(100, 100);
-
-			image.color = Color.red;
 
 			GameObject text = new GameObject("Text");
-			inputField.textComponent = text.AddComponent<Text>();
 			text.transform.SetParent(inputField.transform);
+			inputField.textComponent = text.AddComponent<Text>();
+			InitAnchors(text.GetComponent<RectTransform>(), Vector2.zero, Vector2.one);
+			inputField.textComponent.alignment = TextAnchor.MiddleCenter;
 			AddStyleElement(text);
 
 			GameObject placeholder = new GameObject("Placeholder");
-			inputField.placeholder = placeholder.AddComponent<Text>();
 			placeholder.transform.SetParent(inputField.transform);
+			inputField.placeholder = placeholder.AddComponent<Text>();
+			InitAnchors(placeholder.GetComponent<RectTransform>(), Vector2.zero, Vector2.one);
 			AddStyleElement(placeholder);
 
 			return root;

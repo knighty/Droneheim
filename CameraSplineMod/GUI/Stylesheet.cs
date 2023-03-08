@@ -1,4 +1,5 @@
 ﻿using Droneheim.GUI.Properties.Editors;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -6,13 +7,15 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using UnityEngine;
 using UnityEngine.UI;
-using static Droneheim.GUI.Stylesheet;
 
 namespace Droneheim.GUI
 {
 	internal class StyleProperty
 	{
 		internal object value;
+		internal bool inherited;
+
+		public bool Inherited { get { return inherited; } }
 
 		internal T GetValue<T>()
 		{
@@ -22,17 +25,26 @@ namespace Droneheim.GUI
 
 	enum StyleUnit
 	{
+		Inherit,
 		Absolute,
+		Percentage,
 		EM
+	}
+
+	class StyleDimension
+	{
+		StyleUnit unit;
+		float value;
 	}
 
 	enum StyleProperties
 	{
 		// Font
 		FontSize,
-		FontWeight,
+		FontStyle,
 		Font,
 		Color,
+		TextAlign,
 
 		// Background
 		BackgroundImage,
@@ -46,105 +58,110 @@ namespace Droneheim.GUI
 		Direction
 	}
 
+	enum StyleElementState
+	{
+		None,
+		Hover,
+		Active
+	}
+
+	class StyleRuleSegment
+	{
+		internal string ElementType;
+		private HashSet<string> ClassesHashSet = new HashSet<string>();
+
+		private List<string> classes = new List<string>();
+		internal List<string> Classes
+		{
+			set
+			{
+				foreach (var c in value)
+				{
+					ClassesHashSet.Add(c);
+				}
+				classes = value;
+			}
+			get
+			{
+				return classes;
+			}
+		}
+		internal string State;
+
+		public StyleRuleSegment(string str)
+		{
+			var segments = str.Split('.');
+			ElementType = segments[0];
+			Classes = segments.Skip(1).ToList();
+		}
+
+		public StyleRuleSegment(string type, List<string> classes)
+		{
+			ElementType = type;
+			Classes = classes;
+		}
+
+		public bool Match(StyleRuleSegment other)
+		{
+			if (other.ElementType != ElementType && ElementType != null && ElementType != "") return false;
+			if (other.State != State) return false;
+			foreach (var str in Classes)
+			{
+				if (!other.ClassesHashSet.Contains(str)) return false;
+			}
+			return true;
+		}
+
+		public override string ToString()
+		{
+			string s = ElementType;
+			foreach (var str in Classes) { s += "." + str; }
+			return s;
+		}
+	}
+
 	class StyleRule
 	{
-		internal string[] path;
+		internal StyleClass style;
+		internal List<StyleRuleSegment> segments;
 
-		public StyleRule(string path)
+		public StyleRule(string path, StyleClass style)
 		{
-			this.path = path.Split(' ');
+			this.segments = path.Split(' ').Select(str => new StyleRuleSegment(str)).ToList();
+			this.style = style;
 		}
 
-		public StyleRule(List<string> path)
+		public bool Matches(StyledElement element)
 		{
-			this.path = path.ToArray();
-		}
+			if (!segments[segments.Count - 1].Match(element.StyleRule))
+				return false;
 
-		public int Matches(StyleRule b)
-		{
-			int j = 0;
-			int i = 0;
-			for (; i < path.Length; i++)
+			int i = segments.Count - 2;
+			element = element.ParentNode;
+			while (i >= 0)
 			{
-				bool found = false;
-				for (; j < b.path.Length; j++)
+				while (element != null)
 				{
-					if (b.path[j] == path[i])
+					if (segments[i].Match(element.StyleRule))
 					{
-						found = true;
 						break;
 					}
+					element = element.ParentNode;
 				}
-				if (!found)
-					return 0;
+				i--;
+				if (element == null)
+					return false;
 			}
 
-			if (j == b.path.Length - 1) return 2;
-			return 1;
+			return i <= 0;
 		}
-	}
 
-	// Rule: Body .Window .Title
-	// Element: Body Element Panel .Window Panel .Title
-
-	class StyleTreeNode
-	{
-		internal Dictionary<string, StyleTreeNode> children = new Dictionary<string, StyleTreeNode>();
-		internal List<StyleClass> classes = new List<StyleClass>();
-		internal string name;
-
-		public void AddStyleClass(StyleRule rule, StyleClass styleClass, int level)
+		public override string ToString()
 		{
-			if (level > rule.path.Length - 1)
-			{
-				classes.Add(styleClass);
-				return;
-			}
-
-			string pathSegment = rule.path[level];
-			StyleTreeNode node;
-			if (!children.TryGetValue(pathSegment, out node))
-			{
-				node = children[pathSegment] = new StyleTreeNode();
-			}
-			node.AddStyleClass(rule, styleClass, level + 1);
+			string s = "";
+			foreach (var segment in segments) { s += segment.ToString(); }
+			return s;
 		}
-
-		public void FindMatchingClasses(StyleRule rule, int level, ref List<StyleClass> matchedClasses, ref List<StyleClass> directClasses)
-		{
-			string pathSegment = rule.path[level];
-			List<StyleClass> addTo = (level == rule.path.Length - 1) ? directClasses : matchedClasses;
-			addTo.AddRange(classes);
-
-			for (int j = level + 1; j < rule.path.Length; j++)
-			{
-				string s = rule.path[j];
-				StyleTreeNode node;
-				if (children.TryGetValue(s, out node))
-				{
-					node.FindMatchingClasses(rule, j, ref matchedClasses, ref directClasses);
-				}
-			}
-		}
-
-		public void Print(int level)
-		{
-			foreach(var kv in children)
-			{
-				string str = "";
-				for(int i = 0; i < level; i++)
-				{
-					str += "    ";
-				}
-				Debug.Log(str + kv.Key + " (" + kv.Value.classes.Count + " classes)");
-				kv.Value.Print(level+1);
-			}
-		}
-	}
-
-	class StyleTree : StyleTreeNode
-	{
-
 	}
 
 	class StyleClass
@@ -152,6 +169,10 @@ namespace Droneheim.GUI
 		internal Dictionary<StyleProperties, StyleProperty> properties = new Dictionary<StyleProperties, StyleProperty>();
 		public StyleClass()
 		{
+			SetInherited(StyleProperties.FontSize);
+			SetInherited(StyleProperties.Font);
+			SetInherited(StyleProperties.FontStyle);
+			SetInherited(StyleProperties.Color);
 		}
 
 		public void Set<T>(StyleProperties property, T value)
@@ -159,9 +180,21 @@ namespace Droneheim.GUI
 			properties[property] = new StyleProperty() { value = value };
 		}
 
+		public void SetInherited(StyleProperties property)
+		{
+			properties[property] = new StyleProperty() { inherited = true };
+		}
+
 		public T Get<T>(StyleProperties name)
 		{
 			return (T)(properties[name].value);
+		}
+
+		public StyleProperty GetProperty(StyleProperties name)
+		{
+			StyleProperty p = null;
+			properties.TryGetValue(name, out p);
+			return p;
 		}
 
 		public delegate void Factory(StyleClass style);
@@ -179,177 +212,111 @@ namespace Droneheim.GUI
 
 	}
 
+	[Flags]
+	enum StyleComponentFlag
+	{
+		None = 0,
+		Text = 1 << 0,
+		Layout = 1 << 1,
+		Image = 1 << 2,
+		RectTransform = 1 << 3
+	}
+
 	class Stylesheet : MonoBehaviour
 	{
-		internal StyleTree styleTree = new StyleTree();
+		protected List<StyleRule> styleRules = new List<StyleRule>();
+		protected Dictionary<string, StyleRule> tagRules = new Dictionary<string, StyleRule>();
+		protected Dictionary<string, StyleRule> classRules = new Dictionary<string, StyleRule>();
 
 		//protected Dictionary<StyleRule, StyleClass> styleClasses = new Dictionary<StyleRule, StyleClass>();
 
 		protected Dictionary<int, ComputedStyle> computedStyles = new Dictionary<int, ComputedStyle>();
 
 		internal Dictionary<StyleProperties, StyleDelegate> styleDelegates = new Dictionary<StyleProperties, StyleDelegate>();
+		internal Dictionary<StyleProperties, StyleComponentFlag> styleComponentFlags = new Dictionary<StyleProperties, StyleComponentFlag>();
 
-		public delegate void StyleDelegate(StyleProperty property, StyledElement element);
+		public delegate void StyleDelegate(StyledElement element);
 
 		public Stylesheet()
 		{
-			styleDelegates[StyleProperties.Font] = (StyleProperty property, StyledElement element) =>
+			void DeclareDelegate<T>(StyleProperties prop, StyleComponentFlag flags, Action<StyledElement, T> setter)
 			{
-				if (element.TextComponent != null)
+				styleDelegates[prop] = (StyledElement element) =>
 				{
-					element.TextComponent.font = property.GetValue<Font>();
-				}
+					Debug.Log($"Styling {element.StyleRule} with {prop}");
+					StyledElement node = element;
+					while (node != null)
+					{
+						StyleProperty p = node.ComputedStyle.GetProperty(prop);
+						if (p != null && !p.inherited)
+						{
+							setter(element, p.GetValue<T>());
+							break;
+						}
+						node = node.ParentNode;
+					}
+				};
+				styleComponentFlags[prop] = flags;
+			}
 
-			};
-			styleDelegates[StyleProperties.FontSize] = (StyleProperty property, StyledElement element) =>
-			{
-				if (element.TextComponent != null)
-				{
-					element.TextComponent.fontSize = property.GetValue<int>();
-				}
-			};
+			DeclareDelegate(StyleProperties.Font, StyleComponentFlag.Text, (StyledElement element, Font value) => element.TextComponent.font = value);
+			DeclareDelegate(StyleProperties.FontSize, StyleComponentFlag.Text, (StyledElement element, int value) => element.TextComponent.fontSize = value);
+			DeclareDelegate(StyleProperties.FontStyle, StyleComponentFlag.Text, (StyledElement element, FontStyle value) => element.TextComponent.fontStyle = value);
+			DeclareDelegate(StyleProperties.TextAlign, StyleComponentFlag.Text, (StyledElement element, TextAnchor value) => element.TextComponent.alignment = value);
 
-			styleDelegates[StyleProperties.FontWeight] = (StyleProperty property, StyledElement element) =>
-			{
-				if (element.TextComponent != null)
-				{
-					element.TextComponent.fontStyle = property.GetValue<FontStyle>();
-				}
-			};
+			DeclareDelegate(StyleProperties.Color, StyleComponentFlag.Text, (StyledElement element, Color value) => element.TextComponent.color = value);
 
-			styleDelegates[StyleProperties.Color] = (StyleProperty property, StyledElement element) =>
-			{
-				if (element.TextComponent != null)
-				{
-					element.TextComponent.color = property.GetValue<Color>();
-				}
-			};
+			DeclareDelegate(StyleProperties.Padding, StyleComponentFlag.Layout, (StyledElement element, RectOffset value) => element.LayoutGroupComponent.padding = value);
 
-			styleDelegates[StyleProperties.Padding] = (StyleProperty property, StyledElement element) =>
-			{
-				if (element.LayoutGroupComponent != null)
-				{
-					element.LayoutGroupComponent.padding = property.GetValue<RectOffset>();
-				}
-			};
+			DeclareDelegate(StyleProperties.Width, StyleComponentFlag.RectTransform, (StyledElement element, int value) => element.RectTransformComponent.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, value));
+			DeclareDelegate(StyleProperties.Height, StyleComponentFlag.RectTransform, (StyledElement element, int value) => element.RectTransformComponent.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, value));
 
-			styleDelegates[StyleProperties.Width] = (StyleProperty property, StyledElement element) =>
+			DeclareDelegate(StyleProperties.BackgroundImage, StyleComponentFlag.Image, (StyledElement element, Sprite value) =>
 			{
-				if (element.RectTransformComponent != null)
-				{
-					element.RectTransformComponent.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, property.GetValue<int>());
-				}
-			};
-
-			styleDelegates[StyleProperties.Height] = (StyleProperty property, StyledElement element) =>
-			{
-				if (element.RectTransformComponent != null)
-				{
-					element.RectTransformComponent.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, property.GetValue<int>());
-				}
-			};
-
-			styleDelegates[StyleProperties.BackgroundImage] = (StyleProperty property, StyledElement element) =>
-			{
-				if (element.ImageComponent != null)
-				{
-					element.ImageComponent.sprite = property.GetValue<Sprite>();
-					element.ImageComponent.type = Image.Type.Sliced;
-				}
-			};
-
-			styleDelegates[StyleProperties.BackgroundColor] = (StyleProperty property, StyledElement element) =>
-			{
-				if (element.ImageComponent != null)
-				{
-					element.ImageComponent.color = property.GetValue<Color>();
-				}
-			};
+				element.ImageComponent.sprite = value;
+				element.ImageComponent.type = Image.Type.Sliced;
+			});
+			DeclareDelegate(StyleProperties.BackgroundColor, StyleComponentFlag.Image, (StyledElement element, Color value) => element.ImageComponent.color = value);
 		}
 
 		public void StyleElement(StyledElement element, ComputedStyle computed)
 		{
-			foreach (KeyValuePair<StyleProperties, StyleProperty> kv in computed.properties)
+			foreach (var kv in computed.properties)
 			{
-				styleDelegates[kv.Key](kv.Value, element);
+				StyleComponentFlag required = styleComponentFlags[kv.Key];
+				if ((element.ComponentFlags & required) == required)
+				{
+					styleDelegates[kv.Key](element);
+				}
 			}
-		}
-
-		static bool IsInherited(StyleProperties property)
-		{
-			switch (property)
-			{
-				case StyleProperties.FontSize:
-				case StyleProperties.FontWeight:
-				case StyleProperties.Font:
-				case StyleProperties.Color:
-					return true;
-			}
-			return false;
 		}
 
 		public void AddStyle(string rule, StyleClass style)
 		{
-			styleTree.AddStyleClass(new StyleRule(rule), style, 0);
+			styleRules.Add(new StyleRule(rule, style));
 			//styleClasses.Add(new StyleRule(rule), style);
 		}
 
 		public void AddStyle(string rule, StyleClass.Factory f)
 		{
 			StyleClass style = StyleClass.Create(f);
-			styleTree.AddStyleClass(new StyleRule(rule), style, 0);
-			//styleClasses.Add(new StyleRule(rule), style);
+			styleRules.Add(new StyleRule(rule, style));
 		}
 
-		public ComputedStyle GetComputedStyle(StyleRule rule)
+		public ComputedStyle GetComputedStyle(StyledElement element)
 		{
-			string hashStr = rule.path.Aggregate("", (acc, x) => acc + x + " ");
-			int hash = hashStr.GetHashCode();
-
-			ComputedStyle computed;
-			if (!computedStyles.TryGetValue(hash, out computed))
+			Debug.Log($"Computing {element.StyleRule}");
+			ComputedStyle computed = new ComputedStyle();
+			foreach (StyleRule rule in styleRules)
 			{
-				computed = new ComputedStyle();
-
-				List<StyleClass> matchingStyleClasses = new List<StyleClass>(), directStyleClasses = new List<StyleClass>();
-				styleTree.FindMatchingClasses(rule, 0, ref matchingStyleClasses, ref directStyleClasses);
-
-				Debug.Log(hashStr + " found " + matchingStyleClasses.Count + " matching classes, " + directStyleClasses.Count + " direct classes");
-
-				foreach (var styleClass in matchingStyleClasses)
+				if (rule.Matches(element))
 				{
-					foreach (KeyValuePair<StyleProperties, StyleProperty> property in styleClass.properties)
-					{
-						if (IsInherited(property.Key))
-						{
-							computed.properties[property.Key] = property.Value;
-						}
-					}
-				}
-
-				foreach (var styleClass in directStyleClasses)
-				{
-					foreach (KeyValuePair<StyleProperties, StyleProperty> property in styleClass.properties)
+					Debug.Log($"Matched {rule}");
+					foreach (var property in rule.style.properties)
 					{
 						computed.properties[property.Key] = property.Value;
 					}
 				}
-
-				/*foreach (KeyValuePair<StyleRule, StyleClass> kv in styleClasses)
-				{
-					int match = kv.Key.Matches(rule);
-					Debug.Log(match);
-					if (match > 0)
-					{
-						foreach (KeyValuePair<StyleProperties, StyleProperty> property in kv.Value.properties)
-						{
-							if (IsInherited(property.Key) || match == 2)
-							{
-								computed.properties[property.Key] = property.Value;
-							}
-						}
-					}
-				}*/
 			}
 
 			return computed;

@@ -12,8 +12,49 @@ namespace Droneheim.GUI
 		public RectTransform RectTransformComponent;
 		public LayoutGroup LayoutGroupComponent;
 
-		public string ElementType { get; set; } = "Element";
-		public string StyleClass { get; set; } = null;
+		public string ElementType { get; set; } = null;
+		public List<string> Classes { get; set; } = new List<string>();
+
+		public StyledElement ParentNode
+		{
+			get
+			{
+				return gameObject.transform.parent.GetComponentInParent<StyledElement>();
+			}
+		}
+
+		protected StyleRuleSegment styleRule = null;
+		public StyleRuleSegment StyleRule
+		{
+			get
+			{
+				if (styleRule == null)
+				{
+					if (ElementType == null)
+					{
+						styleRule = ParentNode.StyleRule;
+					}
+					else
+					{
+						styleRule = new StyleRuleSegment(ElementType, Classes);
+					}
+				}
+				return styleRule;
+			}
+		}
+
+		ComputedStyle computed = null;
+		public ComputedStyle ComputedStyle
+		{
+			get
+			{
+				if (computed == null)
+				{
+					computed = Stylesheet.GetComputedStyle(this);
+				}
+				return computed;
+			}
+		}
 
 		protected Stylesheet stylesheet = null;
 		public Stylesheet Stylesheet
@@ -21,50 +62,34 @@ namespace Droneheim.GUI
 			get => stylesheet = stylesheet ?? gameObject.GetComponentInParent<Stylesheet>();
 		}
 
-		public StyleRule GetStyleRule()
+		public StyleComponentFlag ComponentFlags
 		{
-			List<string> pathElements = new List<string>();
-			StyledElement comp = this;
-			while (comp != null)
+			get
 			{
-				string str = "";
-				/*if (comp.StyleClass != null)
-				{
-					str += "." + comp.StyleClass;
-					pathElements.Add("." + comp.StyleClass);
-				}
-				if (comp.ElementType != null)
-				{
-					pathElements.Add(comp.ElementType);
-				}*/
-				if (comp.ElementType != null)
-				{
-					str += comp.ElementType;
-				}
-				if (comp.StyleClass != null)
-				{
-					str += "." + comp.StyleClass;
-				}
-				pathElements.Add(str);
-				comp = comp.gameObject.transform.parent.GetComponentInParent<StyledElement>();
+				StyleComponentFlag flag = StyleComponentFlag.None;
+				flag |= TextComponent != null ? StyleComponentFlag.Text : StyleComponentFlag.None;
+				flag |= ImageComponent != null ? StyleComponentFlag.Image : StyleComponentFlag.None;
+				flag |= RectTransformComponent != null ? StyleComponentFlag.RectTransform : StyleComponentFlag.None;
+				flag |= LayoutGroupComponent != null ? StyleComponentFlag.Layout : StyleComponentFlag.None;
+
+				return flag;
 			}
+		}
 
-			pathElements.Reverse();
+		public void Awake()
+		{
 
-			return new StyleRule(pathElements);
 		}
 
 		public void Style()
 		{
-			Stylesheet stylesheet = Stylesheet;
-
 			TextComponent = GetComponent<Text>();
 			ImageComponent = GetComponent<Image>();
 			RectTransformComponent = GetComponent<RectTransform>();
 			LayoutGroupComponent = GetComponent<LayoutGroup>();
 
-			ComputedStyle computed = stylesheet.GetComputedStyle(GetStyleRule());
-			stylesheet.StyleElement(this, computed);
+			Stylesheet stylesheet = Stylesheet;
+			stylesheet.StyleElement(this, ComputedStyle);
 		}
 
 		public void Start()

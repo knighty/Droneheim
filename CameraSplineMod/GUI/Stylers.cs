@@ -38,14 +38,14 @@ namespace Droneheim.GUI
 			WindowTitle.Set(P.BackgroundImage, spriteInsetBackground);
 			WindowTitle.Set(P.BackgroundColor, RGBColor(87, 82, 76));
 			WindowTitle.Set(P.FontSize, 18);
-			WindowTitle.Set(P.FontWeight, FontStyle.Bold);
+			WindowTitle.Set(P.FontStyle, FontStyle.Bold);
 			WindowTitle.Set(P.Color, Color.white);
 			WindowTitle.Set(P.Padding, new RectOffset(16, 16, 16, 16));
 
 			Button = new StyleClass();
 			Button.Set(P.BackgroundImage, spriteConfirmBackground);
 			Button.Set(P.Padding, new RectOffset(16, 16, 16, 16));
-			Button.Set(P.FontWeight, FontStyle.Bold);
+			Button.Set(P.FontStyle, FontStyle.Bold);
 			Button.Set(P.Color, Color.white);
 		}
 	}

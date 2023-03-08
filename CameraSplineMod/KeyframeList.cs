@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace Droneheim
 {
@@ -62,6 +63,22 @@ namespace Droneheim
 		public void RemoveKeyframe(int t)
 		{
 
+		}
+
+		public bool HasKeyframeAt(int t)
+		{
+			if (list.Count == 0)
+				return false;
+
+			SplineKeyframe<Type> next = list.First;
+			while (next != null)
+			{
+				if (next.Time == t)
+					return true;
+				next = next.Next;
+			}
+
+			return false;
 		}
 
 		public int GetNextKeyframe(int t)
