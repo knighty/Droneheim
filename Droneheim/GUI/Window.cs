@@ -81,7 +81,7 @@ namespace Droneheim.GUI
 			{
 				VerticalLayoutGroup verticalLayoutGroup = contentObject.AddComponent<VerticalLayoutGroup>();
 				contentObject.GetComponent<RectTransform>().anchorMin = Vector2.zero;
-				contentObject.GetComponent<RectTransform>().anchorMax = Vector2.zero;
+				contentObject.GetComponent<RectTransform>().anchorMax = Vector2.one;
 				contentObject.GetComponent<RectTransform>().pivot = new Vector2(0, 0);
 				contentObject.GetComponent<RectTransform>().sizeDelta = Vector2.zero;
 				verticalLayoutGroup.childControlHeight = false;
@@ -94,6 +94,11 @@ namespace Droneheim.GUI
 			GameObject rootObject = ComponentInitialiser.Panel("Window");
 			rootObject.GetComponent<VerticalLayoutGroup>().childControlHeight = true;
 			rootObject.GetComponent<VerticalLayoutGroup>().spacing = 0;
+			rootObject.AddComponent<LayoutElement>();
+			rootObject.GetComponent<LayoutElement>().flexibleWidth = 0;
+			rootObject.GetComponent<LayoutElement>().minWidth = 400;
+			rootObject.GetComponent<LayoutElement>().preferredWidth = 400;
+			ComponentInitialiser.InitAnchors(rootObject.GetComponent<RectTransform>());
 			return rootObject;
 		}
 

@@ -37,7 +37,7 @@ namespace Droneheim.Timeline
 		public int Track { get; set; } = 0;
 
 		private List<KeyframedBlockKeyframes> cachedKeyframeLists = null;
-		private List<KeyframedBlockKeyframes> CachedKeyframeLists { get => cachedKeyframeLists ??= KeyframeLists; }
+		public List<KeyframedBlockKeyframes> CachedKeyframeLists { get => cachedKeyframeLists ??= KeyframeLists; }
 
 		private Action onChange;
 		private bool subscribedToKeyframes = false;

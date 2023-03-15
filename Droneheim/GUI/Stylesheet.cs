@@ -58,11 +58,13 @@ namespace Droneheim.GUI
 		Direction
 	}
 
+	[Flags]
 	enum StyleElementState
 	{
-		None,
-		Hover,
-		Active
+		None = 0,
+		Hover = 1,
+		Focus = 2,
+		Active = 4
 	}
 
 	class StyleRuleSegment
@@ -86,25 +88,40 @@ namespace Droneheim.GUI
 				return classes;
 			}
 		}
-		internal string State;
+		internal StyleElementState State = StyleElementState.None;
 
 		public StyleRuleSegment(string str)
 		{
-			var segments = str.Split('.');
+			var stateSegments = str.Split(':');
+			if (stateSegments.Length > 1)
+			{
+				switch(stateSegments[1])
+				{
+					case "focus":
+						State = StyleElementState.Focus; break;
+					case "hover":
+						State = StyleElementState.Hover; break;
+					case "active":
+						State = StyleElementState.Active; break;
+				}
+			}
+			
+			var segments = stateSegments[0].Split('.');
 			ElementType = segments[0];
 			Classes = segments.Skip(1).ToList();
 		}
 
-		public StyleRuleSegment(string type, List<string> classes)
+		public StyleRuleSegment(string type, List<string> classes, StyleElementState state = StyleElementState.None)
 		{
 			ElementType = type;
 			Classes = classes;
+			State = state;
 		}
 
 		public bool Match(StyleRuleSegment other)
 		{
 			if (other.ElementType != ElementType && ElementType != null && ElementType != "") return false;
-			if (other.State != State) return false;
+			if ((State & other.State) != State) return false;
 			foreach (var str in Classes)
 			{
 				if (!other.ClassesHashSet.Contains(str)) return false;

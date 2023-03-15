@@ -1,4 +1,5 @@
 ﻿using Droneheim.Timeline;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -8,7 +9,7 @@ using UnityEngine.UI;
 namespace Droneheim.GUI
 {
 	[RequireComponent(typeof(VerticalLayoutGroup), typeof(Image))]
-	public class BlockElement : MonoBehaviour, IDragHandler, IBeginDragHandler, ILayoutElement
+	public class BlockElement : MonoBehaviour, IDragHandler, IBeginDragHandler, ILayoutElement, IDeselectHandler, ISelectHandler, IPointerDownHandler
 	{
 		private Block block = null;
 		public Block Block
@@ -45,10 +46,11 @@ namespace Droneheim.GUI
 		public int layoutPriority => 2;
 
 		protected Text text;
-		protected KeyframesLine keyframesLine;
 		protected KeyframesGraph keyframesGraph;
 		protected Dictionary<string, bool> keyframeVisibility = new Dictionary<string, bool>();
 		protected TimelineTransform TimelineTransform { get; set; }
+
+		protected bool expanded = false;
 
 		protected void Awake()
 		{
@@ -57,13 +59,9 @@ namespace Droneheim.GUI
 			TimelineTransform = GetComponentInParent<TimelineGUI>().TimelineTransform;
 			TimelineTransform.OnZoomChanged += UpdateTransform;
 
-			/*GameObject lineObject = new GameObject();
-			keyframesLine = lineObject.AddComponent<KeyframesLine>();
-			lineObject.transform.SetParent(transform, false);*/
-
-			GameObject lineObject = new GameObject();
-			lineObject.transform.SetParent(transform, false);
-			keyframesGraph = lineObject.AddComponent<KeyframesGraph>();
+			GameObject graph = new GameObject();
+			graph.transform.SetParent(transform, false);
+			keyframesGraph = graph.AddComponent<KeyframesGraph>();
 			keyframesGraph.TimelineTransform = TimelineTransform;
 
 			GameObject top = InitTop();
@@ -102,8 +100,16 @@ namespace Droneheim.GUI
 
 			GameObject expand = ComponentInitialiser.Image(DroneheimResources.Expand, null, 16);
 			expand.transform.SetParent(buttons.transform);
+			expand.AddComponent<Button>().onClick.AddListener(ToggleKeyframeGraph);
 
 			return bar;
+		}
+
+		private void ToggleKeyframeGraph()
+		{
+			expanded = !expanded;
+			keyframesGraph.gameObject.SetActive(expanded);
+			UpdateTransform();
 		}
 
 		public void Destroy()
@@ -118,18 +124,7 @@ namespace Droneheim.GUI
 			if (block is KeyframedBlock)
 			{
 				KeyframedBlock block = (KeyframedBlock)Block;
-
-				/*List<Vector2> frames = new List<Vector2>();
-				foreach(var list in block.KeyframeLists)
-				{
-					foreach(Keyframe keyframe in list.Keyframes.Frames)
-					{
-						frames.Add(new Vector2(TimelineTransform.GetXZoomed(keyframe.Frame), 0));
-					}
-				}
-				keyframesLine.Keyframes = frames;*/
-
-				keyframesGraph.BlockKeyframes = block.KeyframeLists;
+				keyframesGraph.BlockKeyframes = block.CachedKeyframeLists;
 			}
 		}
 
@@ -147,6 +142,28 @@ namespace Droneheim.GUI
 
 		public void CalculateLayoutInputVertical()
 		{
+		}
+
+		public void OnDeselect(BaseEventData eventData)
+		{
+			GetComponent<StyledElement>().State &= ~StyleElementState.Focus;
+			//GetComponentsInChildren<IDeselectHandler>().Do(o => o.OnDeselect(eventData));
+			keyframesGraph.OnDeselect(eventData);
+		}
+
+		public void OnSelect(BaseEventData eventData)
+		{
+			Debug.Log("Selected Block Element");
+			GetComponent<StyledElement>().State |= StyleElementState.Focus;
+			keyframesGraph.OnSelect(eventData);
+			//GetComponentsInChildren<ISelectHandler>().Do(o => o.OnSelect(eventData));
+		}
+
+		public void OnPointerDown(PointerEventData eventData)
+		{
+			if (eventData.button != PointerEventData.InputButton.Left)
+				return;
+			EventSystem.current.SetSelectedGameObject(gameObject, eventData);
 		}
 	}
 }

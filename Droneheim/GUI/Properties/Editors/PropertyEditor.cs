@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using UnityEngine.Assertions;
 using System.Reflection;
 using System;
+using Droneheim.Commands;
 
 namespace Droneheim.GUI.Properties.Editors
 {
@@ -75,7 +76,7 @@ namespace Droneheim.GUI.Properties.Editors
 
 		protected void UpdateValue()
 		{
-			property.Value = Value;
+			CommandList.Instance.Add(new SetEditableProperty<T>(property, Value));
 		}
 
 		protected abstract T Value { set; get; }
@@ -99,12 +100,12 @@ namespace Droneheim.GUI.Properties.Editors
 			gameObject.AddComponent<HorizontalLayoutGroup>();
 
 			gameObject.AddComponent<StyledElement>().SetTypeClasses("Element", "property");
-			GetComponent<HorizontalLayoutGroup>().childControlWidth = true;
-			GetComponent<HorizontalLayoutGroup>().childControlHeight = true;
-			GetComponent<HorizontalLayoutGroup>().spacing = 10;
-			GetComponent<HorizontalLayoutGroup>().childForceExpandWidth = false;
-			GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
-			GetComponent<HorizontalLayoutGroup>().childScaleHeight = false;
+			HorizontalLayoutGroup layoutGroup = GetComponent<HorizontalLayoutGroup>();
+			layoutGroup.childControlWidth = true;
+			layoutGroup.childControlHeight = true;
+			layoutGroup.childForceExpandWidth = false;
+			layoutGroup.childForceExpandHeight = false;
+			layoutGroup.spacing = 10;
 
 			GameObject textName = CreatePropertyNameUI();
 			textName.transform.SetParent(gameObject.transform, false);
@@ -148,17 +149,35 @@ namespace Droneheim.GUI.Properties.Editors
 			GameObject container = new GameObject();
 			container.AddComponent<LayoutElement>().flexibleWidth = 0;
 			KeyframeUI keyframeComponent = container.AddComponent<KeyframeUI>();
-			keyframeComponent.OnKeyframePress += UpdateValue;
+			keyframeComponent.OnKeyframePress += ToggleKeyframe;
 			keyframeComponent.OnPreviousKeyframePress += () => property.Timeline.GoTo(property.Value.GetPreviousKeyframe(property.Timeline.CurrentFrame));
 			keyframeComponent.OnNextKeyframePress += () => property.Timeline.GoTo(property.Value.GetNextKeyframe(property.Timeline.CurrentFrame));
 
 			return container;
 		}
 
-		protected void UpdateValue()
+		protected void ToggleKeyframe()
 		{
 			int frame = property.Timeline.CurrentFrame;
-			property.Value.ToggleKeyframe(frame, Value);
+			if (property.Value.HasKeyframeAt(frame))
+				RemoveKeyframe();
+			else
+				SetKeyframe();
+		}
+
+		protected void RemoveKeyframe()
+		{
+			int frame = property.Timeline.CurrentFrame;
+			CommandList.Instance.Add(new RemoveKeyframe<T>(property.Value, frame));
+			//property.Value.RemoveKeyframe(frame);
+			OnFrameChanged(frame);
+		}
+
+		protected void SetKeyframe()
+		{
+			int frame = property.Timeline.CurrentFrame;
+			CommandList.Instance.Add(new SetKeyframe<T>(property.Value, frame, Value));
+			//property.Value.SetKeyframe(frame, Value);
 			OnFrameChanged(frame);
 		}
 

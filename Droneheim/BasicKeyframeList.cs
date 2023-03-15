@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Droneheim
 {
@@ -98,32 +99,41 @@ namespace Droneheim
 			return keyframe;
 		}
 
-		abstract public Type GetValueAt(float t);
+		abstract public Type GetValueAt(float frame);
 
-		public void SetKeyframe(int t, Type value)
+		public void SetKeyframe(int frame, Type value)
 		{
-			if (HasKeyframeAt(t))
+			if (HasKeyframeAt(frame))
 			{
-				SplineKeyframe<Type> keyframe = GetKeyframeAt(t);
+				SplineKeyframe<Type> keyframe = GetKeyframeAt(frame);
 				keyframe.Value = value;
 			}
 			else
 			{
-				SplineKeyframe<Type> keyframe = new SplineKeyframe<Type>(value, t, EasingMode.EaseBoth);
+				SplineKeyframe<Type> keyframe = new SplineKeyframe<Type>(value, frame, EasingMode.EaseBoth);
 				list.Add(keyframe);
 			}
 			OnChange?.Invoke();
 		}
 
-		public void ToggleKeyframe(int t, Type value)
+		public void RemoveKeyframe(int frame)
 		{
-			if (HasKeyframeAt(t))
+			if (HasKeyframeAt(frame))
 			{
-				list.RemoveAt(t);
+				list.RemoveAt(frame);
+			}
+			OnChange?.Invoke();
+		}
+
+		public void ToggleKeyframe(int frame, Type value)
+		{
+			if (HasKeyframeAt(frame))
+			{
+				list.RemoveAt(frame);
 			}
 			else
 			{
-				SplineKeyframe<Type> keyframe = new SplineKeyframe<Type>(value, t, EasingMode.EaseBoth);
+				SplineKeyframe<Type> keyframe = new SplineKeyframe<Type>(value, frame, EasingMode.EaseBoth);
 				list.Add(keyframe);
 			}
 			OnChange?.Invoke();

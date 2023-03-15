@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace Droneheim.GUI
 {
-	[RequireComponent(typeof(VerticalLayoutGroup))]
+	[RequireComponent(typeof(VerticalLayoutGroup), typeof(Image))]
 	public class TimelineTrackLabel : MonoBehaviour
 	{
 		protected void Awake()
@@ -11,11 +11,11 @@ namespace Droneheim.GUI
 			gameObject.AddComponent<StyledElement>().SetTypeClasses("Element", "timeline-track-label");
 
 			LayoutElement layoutElement = gameObject.AddComponent<LayoutElement>();
-			layoutElement.minWidth = 50;
+			layoutElement.minWidth = 200;
 			layoutElement.flexibleWidth = 0;
 			layoutElement.flexibleHeight = 1;
 
-			GameObject text = ComponentInitialiser.Text("1", gameObject, "label");
+			GameObject text = ComponentInitialiser.Text("Track 1", gameObject, "label");
 		}
 	}
 }

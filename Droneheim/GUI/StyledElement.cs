@@ -15,6 +15,18 @@ namespace Droneheim.GUI
 
 		public string ElementType { get; set; } = null;
 		public List<string> Classes { get; set; } = new List<string>();
+		private StyleElementState state = StyleElementState.None;
+		public StyleElementState State
+		{
+			get => state;
+			set
+			{
+				state = value;
+				computed = null;
+				styleRule = null;
+				Style();
+			}
+		}
 
 		public void SetTypeClasses(string elementType, string classes = "")
 		{
@@ -33,53 +45,38 @@ namespace Droneheim.GUI
 		protected StyleRuleSegment styleRule = null;
 		public StyleRuleSegment StyleRule
 		{
-			get
-			{
-				if (styleRule == null)
-				{
-					if (ElementType == null)
-					{
-						styleRule = ParentNode.StyleRule;
-					}
-					else
-					{
-						styleRule = new StyleRuleSegment(ElementType, Classes);
-					}
-				}
-				return styleRule;
-			}
+			get => styleRule ??= (ElementType == null ? ParentNode.StyleRule : new StyleRuleSegment(ElementType, Classes, State));
 		}
 
 		ComputedStyle computed = null;
 		public ComputedStyle ComputedStyle
 		{
-			get
-			{
-				if (computed == null)
-				{
-					computed = Stylesheet.GetComputedStyle(this);
-				}
-				return computed;
-			}
+			get => computed ??= Stylesheet.GetComputedStyle(this);
 		}
 
 		protected Stylesheet stylesheet = null;
 		public Stylesheet Stylesheet
 		{
-			get => stylesheet = stylesheet ?? gameObject.GetComponentInParent<Stylesheet>();
+			get => stylesheet ??= gameObject.GetComponentInParent<Stylesheet>();
 		}
 
+		protected bool componentFlagsCalculated = false;
+		protected StyleComponentFlag componentFlags;
 		public StyleComponentFlag ComponentFlags
 		{
 			get
 			{
-				StyleComponentFlag flag = StyleComponentFlag.None;
-				flag |= TextComponent != null ? StyleComponentFlag.Text : StyleComponentFlag.None;
-				flag |= ImageComponent != null ? StyleComponentFlag.Image : StyleComponentFlag.None;
-				flag |= RectTransformComponent != null ? StyleComponentFlag.RectTransform : StyleComponentFlag.None;
-				flag |= LayoutGroupComponent != null ? StyleComponentFlag.Layout : StyleComponentFlag.None;
+				if (!componentFlagsCalculated)
+				{
+					StyleComponentFlag flag = StyleComponentFlag.None;
+					flag |= TextComponent != null ? StyleComponentFlag.Text : StyleComponentFlag.None;
+					flag |= ImageComponent != null ? StyleComponentFlag.Image : StyleComponentFlag.None;
+					flag |= RectTransformComponent != null ? StyleComponentFlag.RectTransform : StyleComponentFlag.None;
+					flag |= LayoutGroupComponent != null ? StyleComponentFlag.Layout : StyleComponentFlag.None;
+					componentFlags = flag;
+				}
 
-				return flag;
+				return componentFlags;
 			}
 		}
 

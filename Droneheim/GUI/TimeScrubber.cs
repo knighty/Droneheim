@@ -26,10 +26,10 @@ namespace Droneheim.GUI
 		{
 			Vector2 local;
 			RectTransformUtility.ScreenPointToLocalPointInRectangle(timeline.GetComponent<RectTransform>(), eventData.position, null, out local);
-			Debug.Log(local);
+			//Debug.Log(local);
 			timeline.CurrentFrame = timeline.TimelineTransform.GetFrame((int)local.x);
 
-			Debug.Log(eventData.hovered.Aggregate("", (a,b) => a + " " + b.name));
+			//Debug.Log(eventData.hovered.Aggregate("", (a,b) => a + " " + b.name));
 		}
 
 		public void OnEndDrag(PointerEventData eventData)

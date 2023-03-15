@@ -22,6 +22,7 @@ namespace Droneheim.GUI
 			get => points;
 			set
 			{
+				SetVerticesDirty();
 				points = value;
 			}
 		}

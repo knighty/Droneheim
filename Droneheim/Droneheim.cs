@@ -1,13 +1,13 @@
 ﻿using BepInEx.Configuration;
+using Droneheim.Commands;
 using Droneheim.GUI;
 using Droneheim.GUI.Properties;
 using Droneheim.Spline;
 using Droneheim.Timeline;
-using HarmonyLib;
 using System;
 using System.Linq;
+using System.Net;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using P = Droneheim.GUI.StyleProperties;
 
@@ -21,6 +21,8 @@ namespace Droneheim
 		public static Sprite ConfirmBackground;
 		public static Sprite InputBackground;
 		public static Sprite KeyframeBlockBackground;
+		public static Sprite KeyframeBlockBackgroundSelected;
+		public static Sprite HorizontalPaneBackground;
 
 		public static Sprite PreviousKeyframe;
 		public static Sprite NextKeyframe;
@@ -46,63 +48,71 @@ namespace Droneheim
 		public static Sprite Eye;
 		public static Sprite EyeSlash;
 
+		public static Texture2D SPR;
+
 		public static void Init()
 		{
-			Texture2D tex = AssetUtils.LoadTexture("ui.png");
-			Texture2D tex2 = AssetUtils.LoadTexture("ui2.png");
+			//Texture2D sprites = AssetUtils.LoadTexture("ui.png");
+			//Texture2D panels = AssetUtils.LoadTexture("ui2.png");
 
-			Sprite GetSprite(int x, int y, int size, int slicedBorder = 0)
+			AssetBundle bundle = Jotunn.Utils.AssetUtils.LoadAssetBundleFromResources("Assets.ui");
+			ValheimMod.assetBundle = bundle;
+			Texture2D sprites = bundle.LoadAsset<Texture2D>("assets/ui.png");
+			Texture2D panels = bundle.LoadAsset<Texture2D>("assets/ui2.png");
+
+			SPR = sprites;
+
+			//Debug.Log(sprites.GetPixel(20, 20));
+			//Debug.Log(sprites.);
+
+			Sprite GetSprite(Texture2D tex, int x, int y, int size)
 			{
-				if (slicedBorder > 0)
-				{
-					return Sprite.Create(tex, new Rect(x, y, size, size), new Vector2(0.5f, 0.5f), 1, 0, SpriteMeshType.FullRect, new Vector4(slicedBorder, slicedBorder, slicedBorder, slicedBorder));
-				}
-				return Sprite.Create(tex, new Rect(x, y, size, size), new Vector2(0.5f, 0.5f), 1, 0, SpriteMeshType.FullRect);
+				return Sprite.Create(tex, new Rect(x, y, size, size), new Vector2(0.5f, 0.5f), 1, 0);
 			}
 
-			Sprite GetSprite2(int x, int y, int size, Vector4 slicedBorder)
+			Sprite GetSlicedSprite(Texture2D tex, int x, int y, int size, Vector4 slicedBorder)
 			{
-				if (slicedBorder.magnitude > 0)
-				{
-					return Sprite.Create(tex2, new Rect(x, y, size, size), new Vector2(0.5f, 0.5f), 1, 0, SpriteMeshType.FullRect, slicedBorder);
-				}
-				return Sprite.Create(tex2, new Rect(x, y, size, size), new Vector2(0.5f, 0.5f), 1, 0, SpriteMeshType.FullRect);
+				return Sprite.Create(tex, new Rect(x, y, size, size), new Vector2(0.5f, 0.5f), 1, 0, SpriteMeshType.FullRect, slicedBorder);
 			}
 
 			int full = 64;
 			int half = 32;
 
-			PaneBackground = GetSprite(full * 0, 0, full, 16);
-			WindowBackground = GetSprite2(0, 128 * 3, 128, new Vector4(24, 8, 24, 64));
-			InsetBackground = GetSprite(full * 1, 0, full, 16);
-			ConfirmBackground = GetSprite(full * 2, 0, full, 16);
-			InputBackground = GetSprite(full * 4, 0, full, 16);
-			KeyframeBlockBackground = GetSprite(full * 8, 0, full, 31);
+			Vector4 border16 = new Vector4(16, 16, 16, 16);
 
-			KeyframeOff = GetSprite(full * 3, half, half);
-			KeyframeOn = GetSprite(full * 3, 0, half);
+			PaneBackground = GetSlicedSprite(sprites, full * 0, 0, full, border16);
+			HorizontalPaneBackground = Sprite.Create(sprites, new Rect(full * 0 + 16, 0, 32, 64), new Vector2(0.5f, 0.5f), 1, 0, SpriteMeshType.FullRect, new Vector4(8, 16, 8, 16));
+			WindowBackground = GetSlicedSprite(panels, 0, 128 * 3, 128, new Vector4(24, 8, 24, 64));
+			InsetBackground = GetSlicedSprite(sprites, full * 1, 0, full, border16);
+			ConfirmBackground = GetSlicedSprite(sprites, full * 2, 0, full, border16);
+			InputBackground = GetSlicedSprite(sprites, full * 4, 0, full, border16);
+			KeyframeBlockBackground = GetSlicedSprite(sprites, full * 8, 0, full, new Vector4(4, 32, 4, 4));
+			KeyframeBlockBackgroundSelected = GetSlicedSprite(sprites, full * 9, 0, full, new Vector4(4, 32, 4, 4));
 
-			PreviousKeyframe = GetSprite(full * 3 + half * 1, 0, half);
-			NextKeyframe = GetSprite(full * 3 + half * 1, half, half);
+			KeyframeOff = GetSprite(sprites, full * 3, half, half);
+			KeyframeOn = GetSprite(sprites, full * 3, 0, half);
 
-			Collapse = GetSprite(full * 5 + half, 0, half);
-			Expand = GetSprite(full * 5 + half, half, half);
+			PreviousKeyframe = GetSprite(sprites, full * 3 + half * 1, 0, half);
+			NextKeyframe = GetSprite(sprites, full * 3 + half * 1, half, half);
 
-			Play = GetSprite(full * 6, half, half);
-			Pause = GetSprite(full * 6, 0, half);
+			Collapse = GetSprite(sprites, full * 5 + half, 0, half);
+			Expand = GetSprite(sprites, full * 5 + half, half, half);
 
-			Next = GetSprite(full * 6 + half, half, half);
-			Previous = GetSprite(full * 6 + half, 0, half);
+			Play = GetSprite(sprites, full * 6, half, half);
+			Pause = GetSprite(sprites, full * 6, 0, half);
 
-			Stop = GetSprite(full * 7, half, half);
-			//Previous = GetSprite(full * 7, 0, half);
+			Next = GetSprite(sprites, full * 6 + half, half, half);
+			Previous = GetSprite(sprites, full * 6 + half, 0, half);
 
-			Eye = GetSprite(full * 7 + half, half, half);
-			EyeSlash = GetSprite(full * 7 + half, 0, half);
+			Stop = GetSprite(sprites, full * 7, half, half);
+			//Previous = GetSprite(tex, full * 7, 0, half);
 
-			Checkmark = Resources.FindObjectsOfTypeAll<Sprite>().First(f => f.name == "Checkmark");
+			Eye = GetSprite(sprites, full * 7 + half, half, half);
+			EyeSlash = GetSprite(sprites, full * 7 + half, 0, half);
 
-			TimelineScrubber = GetSprite(full * 5, half, half);
+			Checkmark = EyeSlash;// Resources.FindObjectsOfTypeAll<Sprite>().First(f => f.name == "Checkmark");
+
+			TimelineScrubber = GetSprite(sprites, full * 5, half, half);
 		}
 	}
 
@@ -124,27 +134,33 @@ namespace Droneheim
 
 		protected void InitialiseToolbar(GameObject parent, ComponentInitialiser componentInitialiser)
 		{
-			GameObject obj = ComponentInitialiser.Panel("Pane");
+			GameObject obj = ComponentInitialiser.Panel("menu-panel");
 			obj.AddComponent<LayoutElement>().flexibleHeight = 0;
 			obj.transform.SetParent(parent.transform);
 		}
 
 		protected void InitialiseCentre(GameObject parent, ComponentInitialiser componentInitialiser)
 		{
-			GameObject obj = new GameObject();
-			ComponentInitialiser.InitAnchors(obj.AddComponent<RectTransform>());
+			GameObject layout = new GameObject();
+			ComponentInitialiser.InitAnchors(layout.AddComponent<RectTransform>());
+			layout.AddComponent<LayoutElement>().flexibleHeight = 1;
+			layout.transform.SetParent(parent.transform);
+			HorizontalLayoutGroup layoutGroup = layout.AddComponent<HorizontalLayoutGroup>();
+			layoutGroup.childForceExpandWidth = false;
+			layoutGroup.childControlWidth = true;
 
-			obj.AddComponent<LayoutElement>().flexibleHeight = 1;
-			obj.transform.SetParent(parent.transform);
+			GameObject renderWindowObject = new GameObject();
+			renderWindowObject.transform.SetParent(layout.transform);
+			renderWindowObject.AddComponent<RenderWindow>();
 
 			Window window = new Window("Camera Properties")
 			{
-				AnchorMin = new Vector2(1, 0),
-				AnchorMax = new Vector2(1, 0),
+			//	AnchorMin = new Vector2(1, 0),
+			//	AnchorMax = new Vector2(1, 0),
 			};
-			window.PositionRect.offsetMin = new Vector2(-400, 0);
-			window.PositionRect.offsetMax = new Vector2(0, 600);
-			window.AddTo(obj);
+			//window.PositionRect.offsetMin = new Vector2(-400, 0);
+			//window.PositionRect.offsetMax = new Vector2(0, 600);
+			window.AddTo(layout);
 
 			GameObject propertyEditor = new GameObject();
 			PropertyEditorList editorComponent = propertyEditor.AddComponent<PropertyEditorList>();
@@ -159,7 +175,7 @@ namespace Droneheim
 
 		protected void InitialiseTimeline(GameObject parent, ComponentInitialiser componentInitialiser)
 		{
-			GameObject obj = ComponentInitialiser.Panel("Pane");
+			GameObject obj = ComponentInitialiser.Panel("timeline-panel");
 			LayoutElement layoutElement = obj.AddComponent<LayoutElement>();
 			layoutElement.flexibleHeight = 0;
 			layoutElement.preferredHeight = 200;
@@ -180,9 +196,9 @@ namespace Droneheim
 		public void InitialiseUI()
 		{
 			GameObject ui = new GameObject("Canvas");
+			ui.layer = LayerMask.NameToLayer("UI");
 			try
 			{
-				Stylers stylers = new Stylers();
 				ComponentInitialiser componentInitialiser = new ComponentInitialiser();
 
 				Stylesheet stylesheet = ui.AddComponent<Stylesheet>();
@@ -200,24 +216,10 @@ namespace Droneheim
 					s.Set(P.TextAlign, TextAnchor.UpperLeft);
 				});
 
-				stylesheet.AddStyle("Button", s =>
-				{
-					s.Set(P.BackgroundImage, DroneheimResources.ConfirmBackground);
-					s.Set(P.FontStyle, FontStyle.Bold);
-					s.Set(P.Color, Color.white);
-					s.Set(P.Padding, new RectOffset(16, 16, 0, 0));
-					s.Set(P.TextAlign, TextAnchor.MiddleCenter);
-				});
-
 				stylesheet.AddStyle(".Window", s =>
 				{
 					s.Set(P.BackgroundImage, DroneheimResources.WindowBackground);
 					s.Set(P.Color, Color.white);
-				});
-
-				stylesheet.AddStyle(".properties", s =>
-				{
-					s.Set(P.Padding, new RectOffset(16, 16, 16, 16));
 				});
 
 				stylesheet.AddStyle(".Pane", s =>
@@ -238,6 +240,7 @@ namespace Droneheim
 					//s.Set(P.Padding, new RectOffset(16, 16, 8, 8));
 				});
 
+				// Controls
 				stylesheet.AddStyle("Input", s =>
 				{
 					s.Set(P.FontStyle, FontStyle.Bold);
@@ -245,6 +248,27 @@ namespace Droneheim
 					s.Set(P.BackgroundImage, DroneheimResources.InputBackground);
 					s.Set(P.Color, RGBColor(200, 200, 200));
 					s.Set(P.TextAlign, TextAnchor.MiddleCenter);
+				});
+
+				stylesheet.AddStyle("Button", s =>
+				{
+					s.Set(P.BackgroundImage, DroneheimResources.ConfirmBackground);
+					s.Set(P.FontStyle, FontStyle.Bold);
+					s.Set(P.Color, Color.white);
+					s.Set(P.Padding, new RectOffset(16, 16, 0, 0));
+					s.Set(P.TextAlign, TextAnchor.MiddleCenter);
+				});
+
+				// Menu
+				stylesheet.AddStyle(".menu-panel", s =>
+				{
+					s.Set(P.BackgroundImage, DroneheimResources.HorizontalPaneBackground);
+				});
+
+				// Properties
+				stylesheet.AddStyle(".properties", s =>
+				{
+					s.Set(P.Padding, new RectOffset(16, 16, 16, 16));
 				});
 
 				stylesheet.AddStyle(".property", s =>
@@ -256,6 +280,14 @@ namespace Droneheim
 				stylesheet.AddStyle(".property .name", s =>
 				{
 					s.Set(P.TextAlign, TextAnchor.MiddleLeft);
+				});
+
+				// Timeline
+				stylesheet.AddStyle(".timeline-panel", s =>
+				{
+					s.Set(P.Color, Color.white);
+					s.Set(P.Padding, new RectOffset(16, 16, 16, 16));
+					s.Set(P.BackgroundImage, DroneheimResources.HorizontalPaneBackground);
 				});
 
 				stylesheet.AddStyle(".timeline-time", s =>
@@ -287,10 +319,23 @@ namespace Droneheim
 					s.Set(P.Color, Color.white);
 				});
 
+				stylesheet.AddStyle(".block:focus", s =>
+				{
+					s.Set(P.BackgroundImage, DroneheimResources.KeyframeBlockBackgroundSelected);
+				});
+
 				stylesheet.AddStyle(".block .label", s =>
 				{
 					s.Set(P.Padding, new RectOffset(8, 8, 4, 4));
 					s.Set(P.TextAlign, TextAnchor.MiddleLeft);
+					s.Set(P.Color, Color.white);
+				});
+
+				stylesheet.AddStyle(".timeline-track-label", s =>
+				{
+					s.Set(P.BackgroundImage, DroneheimResources.InputBackground);
+					s.Set(P.FontSize, 24);
+					s.Set(P.TextAlign, TextAnchor.MiddleCenter);
 					s.Set(P.Color, Color.white);
 				});
 
@@ -310,7 +355,7 @@ namespace Droneheim
 				ui.AddComponent<ContentSizeFitter>();
 				mainLayoutGroup.childControlHeight = true;
 				mainLayoutGroup.childForceExpandHeight = false;
-				mainLayoutGroup.padding = new RectOffset(16, 16, 16, 16);
+				//mainLayoutGroup.padding = new RectOffset(16, 16, 16, 16);
 				mainLayoutGroup.spacing = 16;
 
 				InitialiseToolbar(ui, componentInitialiser);
@@ -340,6 +385,10 @@ namespace Droneheim
 				gameObject.AddComponent<SplineRenderer>();
 
 			GetComponent<SplineRenderer>().Spline = CameraProperties.Transform;
+
+			CommandList.Instance.OnAdd += command => Debug.Log($"Added command: {command}");
+			CommandList.Instance.OnUndo += command => Debug.Log($"Undo command: {command}");
+			CommandList.Instance.OnRedo += command => Debug.Log($"Redo command: {command}");
 		}
 
 		public void Start()
@@ -352,10 +401,22 @@ namespace Droneheim
 
 		}
 
+		protected void Update()
+		{
+			if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Z))
+			{
+				CommandList.Instance.Undo();
+			}
+			if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Y))
+			{
+				CommandList.Instance.Redo();
+			}
+		}
+
 		public void LateUpdate()
 		{
-			if (EventSystem.current.currentSelectedGameObject != null)
-				Debug.Log(EventSystem.current.currentSelectedGameObject.name);
+			/*if (EventSystem.current.currentSelectedGameObject != null)
+				Debug.Log(EventSystem.current.currentSelectedGameObject.name);*/
 			if (toggleFollowSpline.IsDown())
 			{
 				Debug.Log("Entering Follow Spline Mode");

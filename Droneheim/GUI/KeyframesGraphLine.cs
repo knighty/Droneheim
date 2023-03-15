@@ -14,17 +14,10 @@ namespace Droneheim.GUI
 {
 	public class KeyframesGraphLine : MaskableGraphic
 	{
-		protected List<Vector2[]> points;
-		public List<Vector2[]> Points
-		{
-			get => points;
-			set
-			{
-				points = value;
-			}
-		}
-
 		protected LineRenderer2D lineRenderer = new LineRenderer2D();
+
+		private KeyframesGraph graph;
+		protected KeyframesGraph Graph { get => graph ??= GetComponentInParent<KeyframesGraph>(); }
 
 		protected override void Awake()
 		{
@@ -36,13 +29,41 @@ namespace Droneheim.GUI
 
 		protected void Draw(VertexHelper vh)
 		{
-			if (Points == null)
+			if (Graph.BlockKeyframes == null || Graph.TimelineTransform == null)
 				return;
 
-			LineRendererHelper lineRendererHelper = new LineRendererHelper(vh);
-			foreach (var points in Points)
+			Rect rect = (transform as RectTransform).rect;
+			int lineResolution = 5;
+			int numPoints = (int)Mathf.Ceil(rect.width / lineResolution);
+			List<Vector2[]> linePoints = new List<Vector2[]>();
+
+			foreach (var block in Graph.BlockKeyframes)
 			{
-				lineRenderer.Render(lineRendererHelper, points, new LineRendererOptions() { Weight = 1 });
+				Keyframes keyframes = block.Keyframes;
+				if (keyframes.Count == 0) continue;
+
+				float min = keyframes.MinimumMagnitude;
+				float max = keyframes.MaximumMagnitude;
+				float delta = max - min;
+				Vector2[] lp = new Vector2[numPoints];
+
+				for (int x = 0; x < numPoints; x++)
+				{
+					int frame = Graph.TimelineTransform.GetFrameZoomed(x * lineResolution);
+					float value = keyframes.GetMagnitudeAt(frame);
+					float y = delta > 0 ? ((value - min) / (max - min)) : 0.5f;
+
+					Vector2 center = Graph.TransformPoint(rect, new Vector2(x * lineResolution, y));
+					lp[x] = center;
+				}
+
+				linePoints.Add(lp);
+			}
+
+			LineRendererHelper lineRendererHelper = new LineRendererHelper(vh);
+			foreach (var p in linePoints)
+			{
+				lineRenderer.Render(lineRendererHelper, p, new LineRendererOptions() { Weight = 1, Color = color });
 			}
 		}
 

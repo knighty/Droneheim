@@ -9,7 +9,8 @@ using System;
 
 namespace Droneheim.GUI
 {
-	public class KeyframesGraph : MaskableGraphic, ILayoutElement, IDragHandler, IPointerEnterHandler, IPointerExitHandler, IBeginDragHandler, IEndDragHandler, IDeselectHandler
+	[RequireComponent(typeof(RectTransform))]
+	public class KeyframesGraph : MonoBehaviour, ILayoutElement, IDragHandler, IPointerEnterHandler, IPointerExitHandler, IBeginDragHandler, IEndDragHandler, IDeselectHandler, ISelectHandler//, IPointerDownHandler
 	{
 		private List<KeyframedBlockKeyframes> blockKeyframes;
 		public List<KeyframedBlockKeyframes> BlockKeyframes
@@ -17,7 +18,7 @@ namespace Droneheim.GUI
 			get => blockKeyframes; set
 			{
 				blockKeyframes = value;
-				SetAllDirty();
+				UpdateGraphs();
 			}
 		}
 
@@ -53,9 +54,9 @@ namespace Droneheim.GUI
 			return selectedKeyframes.Contains(keyframe) || selectingKeyframes.Contains(keyframe);
 		}
 
-		protected override void Awake()
+		protected void Awake()
 		{
-			base.Awake();
+			//base.Awake();
 
 			ComponentInitialiser.InitAnchors(GetComponent<RectTransform>(), Vector2.zero, Vector2.one);
 			//GetComponent<RectTransform>().pivot = new Vector2(0, 1);
@@ -63,18 +64,24 @@ namespace Droneheim.GUI
 			GameObject lineObject = new GameObject();
 			lineObject.transform.SetParent(transform);
 			lineGraph = lineObject.AddComponent<KeyframesGraphLine>();
+			lineGraph.color = new Color32(255, 255, 255, 80);
 
 			GameObject pointsObject = new GameObject();
 			pointsObject.transform.SetParent(transform);
 			pointsGraph = pointsObject.AddComponent<KeyframesGraphPoints>();
 		}
 
-		protected void DrawKeyframes()
+		public Vector2 TransformPoint(Rect pixelAdjustedRect, Vector2 normalizedPoint)
+		{
+			return new Vector2(normalizedPoint.x, 5 + normalizedPoint.y * (pixelAdjustedRect.height - 10));
+		}
+
+		protected void UpdateGraphs()
 		{
 			if (BlockKeyframes == null || TimelineTransform == null)
 				return;
 
-			Rect rect = GetPixelAdjustedRect();
+			Rect rect = (transform as RectTransform).rect;
 			int lineResolution = 5;
 			int numPoints = (int)Mathf.Ceil(rect.width / lineResolution);
 			List<Vector2[]> linePoints = new List<Vector2[]>();
@@ -94,9 +101,9 @@ namespace Droneheim.GUI
 				{
 					int frame = TimelineTransform.GetFrameZoomed(x * lineResolution);
 					float value = keyframes.GetMagnitudeAt(frame);
-					float y = delta > 0 ? ((value - min) / (max - min) * rect.height) : rect.height / 2;
+					float y = delta > 0 ? ((value - min) / (max - min)) : 0.5f;
 
-					Vector2 center = new Vector2(x * lineResolution, y);
+					Vector2 center = TransformPoint(rect, new Vector2(x * lineResolution, y));
 					lp[x] = center;
 				}
 
@@ -107,27 +114,27 @@ namespace Droneheim.GUI
 					int frame = keyframe.Frame;
 					float x = TimelineTransform.GetXZoomed(frame);
 					float value = keyframes.GetMagnitudeAt(frame);
-					float y = delta > 0 ? ((value - min) / (max - min) * rect.height) : rect.height / 2;
+					float y = delta > 0 ? ((value - min) / (max - min)) : 0.5f;
 
-					Vector2 center = new Vector2(x + rect.xMin, y + rect.yMin);
+					Vector2 center = TransformPoint(rect, new Vector2(x + rect.xMin, y + rect.yMin));
 					points.Add(keyframe, center);
 				}
 
-				pointsGraph.Points = points;
 			}
 
-			lineGraph.Points = linePoints;
+			lineGraph.SetVerticesDirty();
+			pointsGraph.Points = points;
 		}
 
-		protected override void OnPopulateMesh(VertexHelper vh)
+		/*protected override void OnPopulateMesh(VertexHelper vh)
 		{
 			vh.Clear();
 			DrawKeyframes();
-		}
+		}*/
 
 		public void HandleSelection(Rect selectionRect, ref HashSet<Keyframe> selected)
 		{
-			Rect rect = GetPixelAdjustedRect();
+			Rect rect = (transform as RectTransform).rect;// GetPixelAdjustedRect();
 			foreach (var block in blockKeyframes)
 			{
 				Keyframes keyframes = block.Keyframes;
@@ -142,9 +149,9 @@ namespace Droneheim.GUI
 					int frame = keyframe.Frame;
 					float x = TimelineTransform.GetXZoomed(frame);
 					float value = keyframes.GetMagnitudeAt(frame);
-					float y = delta > 0 ? ((value - min) / (max - min) * rect.height) : rect.height / 2;
+					float y = delta > 0 ? ((value - min) / (max - min)) : 0.5f;
 
-					Vector2 center = new Vector2(x + rect.xMin, y + rect.yMin);
+					Vector2 center = TransformPoint(rect, new Vector2(x + rect.xMin, y + rect.yMin));
 					if (selectionRect.Contains(center))
 					{
 						selected.Add(keyframe);
@@ -166,7 +173,7 @@ namespace Droneheim.GUI
 
 		protected void BeginState(State state)
 		{
-			Debug.Log($"Begin State: {state}");
+			//Debug.Log($"Begin State: {state}");
 			switch(state)
 			{
 				case State.Default:
@@ -176,10 +183,7 @@ namespace Droneheim.GUI
 					break;
 				case State.SelectingKeyframes:
 					if (!Input.GetKey(KeyCode.LeftShift))
-					{
-						Debug.Log("deselecting");
 						selectedKeyframes.Clear();
-					}
 					selectingKeyframes.Clear();
 					break;
 			}
@@ -254,10 +258,10 @@ namespace Droneheim.GUI
 
 		public void OnDeselect(BaseEventData eventData)
 		{
-			selectedKeyframes.Clear();
 			switch (state)
 			{
 				case State.SelectedKeyframes:
+					selectedKeyframes.Clear();
 					SetState(State.Default);
 					break;
 			}
@@ -270,5 +274,16 @@ namespace Droneheim.GUI
 		public void CalculateLayoutInputVertical()
 		{
 		}
+
+		public void OnSelect(BaseEventData eventData)
+		{
+		}
+
+		/*public void OnPointerDown(PointerEventData eventData)
+		{
+			if (eventData.button != PointerEventData.InputButton.Left)
+				return;
+			EventSystem.current.SetSelectedGameObject(gameObject, eventData);
+		}*/
 	}
 }

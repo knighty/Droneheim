@@ -69,6 +69,7 @@ namespace Droneheim.GUI.Drawing
 	{
 		public LineCap LineCap = LineCap.Rounded;
 		public float Weight = 1.0f;
+		public Color Color = Color.white;
 	}
 
 	public class LineRenderer2D
@@ -122,8 +123,8 @@ namespace Droneheim.GUI.Drawing
 				Vector2 offset = halfway * options.Weight / sinAngle;
 				float directionSign = Vector2.Dot(d0, new Vector2(-d1.y, d1.x)) > 0 ? -1 : 1;
 
-				int index0 = helper.AddVert(p0 + offset * directionSign, Color.white);
-				int index1 = helper.AddVert(p0 - offset * directionSign, Color.white);
+				int index0 = helper.AddVert(p0 + offset * directionSign, options.Color);
+				int index1 = helper.AddVert(p0 - offset * directionSign, options.Color);
 				if (!lastPoint)
 				{
 					helper.AddTriangle(index0, index0 + 2, index0 + 1);

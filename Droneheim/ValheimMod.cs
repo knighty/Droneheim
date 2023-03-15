@@ -53,6 +53,8 @@ namespace Droneheim
 
 		private static FlyCamera flyCamera;
 
+		public static AssetBundle assetBundle;
+
 		void Awake()
 		{
 			var harmony = new Harmony(MID);
@@ -77,6 +79,7 @@ namespace Droneheim
 			_hi?.UnpatchSelf();
 			GameObject.Destroy(droneheim);
 			Destroy(flyCamera);
+			assetBundle?.Unload(true);
 		}
 
 		[HarmonyPatch(typeof(Player), "Update")]

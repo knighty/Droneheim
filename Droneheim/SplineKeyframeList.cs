@@ -133,16 +133,6 @@ namespace Droneheim
 					break;
 				}
 			}
-			/*SplineKeyframe<Type> n = first;
-			while (n != null)
-			{
-				if (n.time == frame)
-				{
-					Remove(n);
-					return;
-				}
-				n = n.next;
-			}*/
 		}
 
 		public void Clear()

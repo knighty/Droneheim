@@ -45,6 +45,10 @@
     <Reference Include="BepInEx">
       <HintPath>Libs\BepInEx.dll</HintPath>
     </Reference>
+    <Reference Include="Jotunn, Version=2.10.4.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Libs\Jotunn.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -266,6 +270,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BasicKeyframeList.cs" />
+    <Compile Include="Commands\Command.cs" />
+    <Compile Include="Commands\CommandList.cs" />
+    <Compile Include="Commands\RemoveKeyframe.cs" />
+    <Compile Include="Commands\SetEditableProperty.cs" />
+    <Compile Include="Commands\SetKeyframe.cs" />
     <Compile Include="FloatKeyframes.cs" />
     <Compile Include="FlyCamera.cs" />
     <Compile Include="GUI\KeyframesGraphPoints.cs" />
@@ -274,6 +283,7 @@
     <Compile Include="GUI\KeyframesLine.cs" />
     <Compile Include="GUI\Playback.cs" />
     <Compile Include="GUI\Properties\Editors\Bool.cs" />
+    <Compile Include="GUI\RenderWindow.cs" />
     <Compile Include="GUI\SelectionBox.cs" />
     <Compile Include="GUI\Timeline.cs" />
     <Compile Include="GUI\TimelineTrack.cs" />
@@ -328,6 +338,16 @@
     <Compile Include="Vector2Keyframes.cs" />
     <Compile Include="Vector3Keyframes.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\ui" />
+    <EmbeddedResource Include="Assets\ui.manifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\AssetBundles" />
+    <EmbeddedResource Include="Assets\AssetBundles.manifest" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>copy /Y "$(TargetDir)$(ProjectName).dll" "C:\Program Files (x86)\Steam\steamapps\common\Valheim\BepInEx\scripts\$(ProjectName).dll"</PostBuildEvent>
+  </PropertyGroup>
 </Project>

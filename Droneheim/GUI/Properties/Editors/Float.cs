@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Droneheim.Commands;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -56,6 +57,7 @@ namespace Droneheim.GUI.Properties.Editors
 			{
 				ProcessInput(text);
 				UpdateInput();
+				SetKeyframe();
 			});
 
 			return input;
