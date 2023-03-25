@@ -1,4 +1,5 @@
 ﻿using BepInEx.Configuration;
+using Birta;
 using Droneheim.Commands;
 using Droneheim.GUI;
 using Droneheim.GUI.Properties;
@@ -6,10 +7,9 @@ using Droneheim.Spline;
 using Droneheim.Timeline;
 using System;
 using System.Linq;
-using System.Net;
 using UnityEngine;
 using UnityEngine.UI;
-using P = Droneheim.GUI.StyleProperties;
+using P = Birta.StyleProperties;
 
 namespace Droneheim
 {

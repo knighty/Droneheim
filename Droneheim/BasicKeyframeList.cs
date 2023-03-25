@@ -50,11 +50,16 @@ namespace Droneheim
 	abstract public class BasicKeyframeList<Type> : Keyframes, IEnumerable<Keyframe>
 	{
 		protected SplineKeyframeList<Type> list = new SplineKeyframeList<Type>();
-		public SplineKeyframeList<Type> List { get { return list; } }
-
-		abstract protected KeyframeListMagnitude<Type> MagnitudeCalculator { get; }
-
 		protected Type value;
+		private Action onChange;
+
+		protected BasicKeyframeList(Type defaultValue)
+		{
+			value = defaultValue;
+		}
+
+		public SplineKeyframeList<Type> List { get => list; }
+		abstract protected KeyframeListMagnitude<Type> MagnitudeCalculator { get; }
 
 		public int Count { get => list.Count; }
 		public virtual float MinimumMagnitude { get => 0; }
@@ -62,25 +67,12 @@ namespace Droneheim
 		public Keyframe FirstKeyframe { get => list.First; }
 		public Keyframe LastKeyframe { get => list.Last; }
 
-		private Action onChange;
 		public Action OnChange { get => onChange; set { onChange = value; } }
 
 		public IEnumerable<Keyframe> Frames => this;
 
-		protected BasicKeyframeList(Type defaultValue)
-		{
-			value = defaultValue;
-		}
-
-		public IEnumerator<Keyframe> GetEnumerator()
-		{
-			return new BasicKeyframeListFrameEnumerator<Type>(list);
-		}
-
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return new BasicKeyframeListFrameEnumerator<Type>(list);
-		}
+		public IEnumerator<Keyframe> GetEnumerator() => new BasicKeyframeListFrameEnumerator<Type>(list);
+		IEnumerator IEnumerable.GetEnumerator() => new BasicKeyframeListFrameEnumerator<Type>(list);
 
 		protected SplineKeyframe<Type> GetKeyframeAt(float t)
 		{

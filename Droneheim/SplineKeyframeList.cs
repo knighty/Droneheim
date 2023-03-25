@@ -44,13 +44,12 @@ namespace Droneheim
 
 	public class SplineKeyframeList<Type> : IEnumerable<SplineKeyframe<Type>>
 	{
-		private SplineKeyframe<Type> first;
-		public SplineKeyframe<Type> First { get => first; }
-		
-		private SplineKeyframe<Type> last;
-		public SplineKeyframe<Type> Last { get => last; }
-		
 		protected int count = 0;
+		private SplineKeyframe<Type> first;
+		private SplineKeyframe<Type> last;
+
+		public SplineKeyframe<Type> First { get => first; }
+		public SplineKeyframe<Type> Last { get => last; }
 		public int Count { get => count; }
 
 		public void Add(SplineKeyframe<Type> keyframe)

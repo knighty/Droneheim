@@ -311,9 +311,7 @@
     <Compile Include="GUI\Properties\Editor.cs" />
     <Compile Include="GUI\Properties\Property.cs" />
     <Compile Include="GUI\Properties\Editors\PropertyEditor.cs" />
-    <Compile Include="GUI\StyledElement.cs" />
     <Compile Include="GUI\Stylers.cs" />
-    <Compile Include="GUI\Stylesheet.cs" />
     <Compile Include="GUI\Window.cs" />
     <Compile Include="KeyframeController.cs" />
     <Compile Include="Keyframes.cs" />
@@ -345,6 +343,12 @@
   <ItemGroup>
     <EmbeddedResource Include="Assets\AssetBundles" />
     <EmbeddedResource Include="Assets\AssetBundles.manifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Birta\Birta.csproj">
+      <Project>{4a2d90e3-55da-4db3-a1b1-662b126fba75}</Project>
+      <Name>Birta</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

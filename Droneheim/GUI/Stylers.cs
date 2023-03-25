@@ -1,5 +1,6 @@
-﻿using UnityEngine;
-using P = Droneheim.GUI.StyleProperties;
+﻿using Birta;
+using UnityEngine;
+using P = Birta.StyleProperties;
 
 namespace Droneheim.GUI
 {
